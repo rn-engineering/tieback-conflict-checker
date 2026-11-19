@@ -1,3 +1,4 @@
+import hashlib
 from itertools import combinations
 from io import BytesIO
 
@@ -224,22 +225,66 @@ if uploaded_file is not None:
 
 input_data = normalize_input(input_data)
 
+input_source = (
+    hashlib.sha256(uploaded_file.getvalue()).hexdigest()
+    if uploaded_file is not None else "sample"
+)
+if st.session_state.get("tieback_input_source") != input_source:
+    st.session_state["tieback_input_source"] = input_source
+    st.session_state["tieback_input_rows"] = assign_automatic_ids(input_data)
+    st.session_state["tieback_editor_version"] = (
+        st.session_state.get("tieback_editor_version", 0) + 1
+    )
+
 st.subheader("Tieback Inputs")
-st.caption("Leave Tieback ID blank to assign the next available TB-### label.")
+st.caption("Blank Tieback IDs are assigned the next available TB-### label.")
+editor_key = f"tieback_editor_{st.session_state['tieback_editor_version']}"
 edited_data = st.data_editor(
-    input_data, num_rows="dynamic", hide_index=True, use_container_width=True,
+    st.session_state["tieback_input_rows"],
+    num_rows="dynamic", hide_index=True, use_container_width=True,
     column_config={
         "Tieback ID": st.column_config.TextColumn("Tieback ID"),
-        "Direction": st.column_config.NumberColumn("Direction (°)", step=1.0),
-        "Drill Angle": st.column_config.NumberColumn("Drill Angle (°)", step=1.0),
-        "Length": st.column_config.NumberColumn("Length (ft)", step=1.0),
-        "Start Elev": st.column_config.NumberColumn("Start Elev (ft)", step=1.0),
-        "X": st.column_config.NumberColumn("X (ft)", step=1.0),
-        "Y": st.column_config.NumberColumn("Y (ft)", step=1.0),
-    }, key="tieback_editor",
+        "Direction": st.column_config.NumberColumn("Direction (°)", step=0.01, format="%.2f"),
+        "Drill Angle": st.column_config.NumberColumn("Drill Angle (°)", step=0.01, format="%.2f"),
+        "Length": st.column_config.NumberColumn("Length (ft)", step=0.01, format="%.2f"),
+        "Start Elev": st.column_config.NumberColumn("Start Elev (ft)", step=0.01, format="%.2f"),
+        "X": st.column_config.NumberColumn("X (ft)", step=0.01, format="%.2f"),
+        "Y": st.column_config.NumberColumn("Y (ft)", step=0.01, format="%.2f"),
+    }, key=editor_key,
 )
 
-geometry_input = assign_automatic_ids(normalize_input(edited_data))
+edited_data = normalize_input(edited_data)
+assigned_data = assign_automatic_ids(edited_data)
+if not edited_data["Tieback ID"].equals(assigned_data["Tieback ID"]):
+    st.session_state["tieback_input_rows"] = assigned_data
+    st.session_state["tieback_editor_version"] += 1
+    st.rerun()
+
+st.session_state["tieback_input_rows"] = edited_data
+if not edited_data.empty:
+    row_index = st.selectbox(
+        "Row to duplicate",
+        options=range(len(edited_data)),
+        format_func=lambda index: (
+            f"{edited_data.iloc[index]['Tieback ID']} (row {index + 1})"
+        ),
+    )
+    if st.button("Duplicate selected row"):
+        duplicate = edited_data.iloc[[row_index]].copy()
+        duplicate["Tieback ID"] = ""
+        st.session_state["tieback_input_rows"] = assign_automatic_ids(
+            pd.concat([edited_data, duplicate], ignore_index=True)
+        )
+        st.session_state["tieback_editor_version"] += 1
+        st.rerun()
+
+input_csv = edited_data.to_csv(index=False)
+st.download_button(
+    "Save tieback inputs (CSV)", data=input_csv,
+    file_name="tieback_inputs.csv", mime="text/csv",
+)
+
+geometry_input = assigned_data
 if geometry_input.empty:
     st.info("Add tieback data in the table or import a CSV/Excel file.")
     st.stop()

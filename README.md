@@ -4,8 +4,10 @@ A Streamlit application for checking spatial conflicts between soldier pile tieb
 
 ## Features
 
-- Editable and CSV/Excel-importable tieback data
-- Automatic Tieback IDs
+- Editable and CSV/Excel-importable tieback data, with decimal inputs to 0.01
+- One-click duplication of a selected tieback row
+- Automatic sequential `TB-###` IDs for blank tieback IDs
+- Downloadable CSV of the current tieback inputs for reuse
 - Exact 3D line-segment nearest-distance calculations
 - User-defined conflict and warning distances
 - Plan-view visualization with interactive conflict markers
