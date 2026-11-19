@@ -260,9 +260,8 @@ edited_data = normalize_input(edited_data)
 if apply_edits:
     assigned_data = assign_automatic_ids(edited_data)
     st.session_state["tieback_input_rows"] = assigned_data
-    if not edited_data["Tieback ID"].equals(assigned_data["Tieback ID"]):
-        st.session_state["tieback_editor_version"] += 1
-        st.rerun()
+    st.session_state["tieback_editor_version"] += 1
+    st.rerun()
 
 edited_data = st.session_state["tieback_input_rows"]
 assigned_data = assign_automatic_ids(edited_data)
