@@ -239,45 +239,33 @@ if st.session_state.get("tieback_input_source") != input_source:
 st.subheader("Tieback Inputs")
 st.caption("Blank Tieback IDs are assigned the next available TB-### label.")
 editor_key = f"tieback_editor_{st.session_state['tieback_editor_version']}"
-edited_data = st.data_editor(
-    st.session_state["tieback_input_rows"],
-    num_rows="dynamic", hide_index=True, use_container_width=True,
-    column_config={
-        "Tieback ID": st.column_config.TextColumn("Tieback ID"),
-        "Direction": st.column_config.NumberColumn("Direction (°)", step=0.01, format="%.2f"),
-        "Drill Angle": st.column_config.NumberColumn("Drill Angle (°)", step=0.01, format="%.2f"),
-        "Length": st.column_config.NumberColumn("Length (ft)", step=0.01, format="%.2f"),
-        "Start Elev": st.column_config.NumberColumn("Start Elev (ft)", step=0.01, format="%.2f"),
-        "X": st.column_config.NumberColumn("X (ft)", step=0.01, format="%.2f"),
-        "Y": st.column_config.NumberColumn("Y (ft)", step=0.01, format="%.2f"),
-    }, key=editor_key,
-)
-
-edited_data = normalize_input(edited_data)
-assigned_data = assign_automatic_ids(edited_data)
-if not edited_data["Tieback ID"].equals(assigned_data["Tieback ID"]):
-    st.session_state["tieback_input_rows"] = assigned_data
-    st.session_state["tieback_editor_version"] += 1
-    st.rerun()
-
-st.session_state["tieback_input_rows"] = edited_data
-if not edited_data.empty:
-    row_index = st.selectbox(
-        "Row to duplicate",
-        options=range(len(edited_data)),
-        format_func=lambda index: (
-            f"{edited_data.iloc[index]['Tieback ID']} (row {index + 1})"
-        ),
+with st.form("tieback_inputs_form"):
+    edited_data = st.data_editor(
+        st.session_state["tieback_input_rows"],
+        num_rows="dynamic", hide_index=True, use_container_width=True,
+        column_config={
+            "Tieback ID": st.column_config.TextColumn("Tieback ID"),
+            "Direction": st.column_config.NumberColumn("Direction (°)", step=0.01, format="%.2f"),
+            "Drill Angle": st.column_config.NumberColumn("Drill Angle (°)", step=0.01, format="%.2f"),
+            "Length": st.column_config.NumberColumn("Length (ft)", step=0.01, format="%.2f"),
+            "Start Elev": st.column_config.NumberColumn("Start Elev (ft)", step=0.01, format="%.2f"),
+            "X": st.column_config.NumberColumn("X (ft)", step=0.01, format="%.2f"),
+            "Y": st.column_config.NumberColumn("Y (ft)", step=0.01, format="%.2f"),
+        }, key=editor_key,
     )
-    if st.button("Duplicate selected row"):
-        duplicate = edited_data.iloc[[row_index]].copy()
-        duplicate["Tieback ID"] = ""
-        st.session_state["tieback_input_rows"] = assign_automatic_ids(
-            pd.concat([edited_data, duplicate], ignore_index=True)
-        )
+    apply_edits = st.form_submit_button("Apply edits")
+
+st.caption("Apply edits to save your changes and refresh the conflict results.")
+edited_data = normalize_input(edited_data)
+if apply_edits:
+    assigned_data = assign_automatic_ids(edited_data)
+    st.session_state["tieback_input_rows"] = assigned_data
+    if not edited_data["Tieback ID"].equals(assigned_data["Tieback ID"]):
         st.session_state["tieback_editor_version"] += 1
         st.rerun()
 
+edited_data = st.session_state["tieback_input_rows"]
+assigned_data = assign_automatic_ids(edited_data)
 input_csv = edited_data.to_csv(index=False)
 st.download_button(
     "Save tieback inputs (CSV)", data=input_csv,
