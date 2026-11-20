@@ -347,7 +347,22 @@ else:
         "A Distance Along", "B Distance Along", "A Closest X", "A Closest Y", "A Closest Elev",
         "B Closest X", "B Closest Y", "B Closest Elev",
     ]
-    st.dataframe(conflicts[report_columns].round(3), hide_index=True, use_container_width=True)
+    report = conflicts[report_columns]
+
+    def style_closest_elevations(row):
+        styles = [""] * len(row)
+        a_elev = row["A Closest Elev"]
+        b_elev = row["B Closest Elev"]
+        if a_elev > b_elev:
+            styles[row.index.get_loc("A Closest Elev")] = "background-color: #b7e1cd; color: #14532d"
+            styles[row.index.get_loc("B Closest Elev")] = "background-color: #f4cccc; color: #7f1d1d"
+        elif b_elev > a_elev:
+            styles[row.index.get_loc("A Closest Elev")] = "background-color: #f4cccc; color: #7f1d1d"
+            styles[row.index.get_loc("B Closest Elev")] = "background-color: #b7e1cd; color: #14532d"
+        return styles
+
+    report_styler = report.style.apply(style_closest_elevations, axis=1).format(precision=3)
+    st.dataframe(report_styler, hide_index=True, use_container_width=True)
 
 output = BytesIO()
 with pd.ExcelWriter(output, engine="openpyxl") as writer:
